@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-download_link = ("https://raw.githubusercontent.com/yongkheehou/recyclegowheredata/main/random_generated_website_usage_data.csv")
+download_link = ("https://raw.githubusercontent.com/yongkheehou/recyclegowheredata/main/db.csv")
 
 class PrepareData:
     
@@ -21,5 +21,5 @@ class PrepareData:
         return pd.read_csv(f"data/raw/{name}.csv")
 
 # working code
-x = pd.read_csv(download_link)
-print(x.head)
+# x = pd.read_csv(download_link)
+# print(x.head)
