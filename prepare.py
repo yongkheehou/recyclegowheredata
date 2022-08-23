@@ -22,8 +22,12 @@ class PrepareData:
         return df.loc[:, filt]
     
     def transpose_to_ts(self, df):
+        # convert data type of date column from object to datetime
         df['Date'] = pd.to_datetime(df['Date'])
+        # set date column as index of dataframe
         df.set_index('Date', inplace = True)
+        # sort according to date
+        df = df.sort_index()
         # df = df.T
         # df.index = pd.to_datetime(df.index)
         return df
