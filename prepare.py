@@ -97,4 +97,4 @@ data = PrepareData().run()
 df = data['original']
 data_2 = AggregateData(df)
 save_files = save(data_2)
-print(data_2['item_table'])
+print(data_2['organisation_table'])
