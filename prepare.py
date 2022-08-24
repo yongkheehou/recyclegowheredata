@@ -21,57 +21,72 @@ class PrepareData:
         filt = is_area 
         return df.loc[:, filt]
     
-    def transpose_to_ts(self, df):
+    def sort_dates(self, df):
         # convert data type of date column from object to datetime
         df['Date'] = pd.to_datetime(df['Date'])
+        # sort dates in ascending order
+        df.sort_values(by='Date', inplace=True)
+        # convert dates to month names
+        df['Date'] = df['Date'].dt.month_name().str.slice(stop=3)
+
+        return df
+    
+    def transpose_to_ts(self, df):
         # set date column as index of dataframe
         df.set_index('Date', inplace = True)
         # sort according to date
-        df = df.sort_index()
+        # df = df.sort_index()
         # df = df.T
         # df.index = pd.to_datetime(df.index)
         return df
     
-    def group_item(self, df):
-        grouping_col = df.columns[0]
-        return df.groupby(grouping_col).sum()
+    # def group_item(self, df):
+    #     grouping_col = df.columns[0]
+    #     return df.groupby(grouping_col).sum()
     
-    def group_collection_method(self, df):
-        grouping_col = df.columns[1]
-        return df.groupby(grouping_col).sum()
+    # def group_collection_method(self, df):
+    #     grouping_col = df.columns[1]
+    #     return df.groupby(grouping_col).sum()
     
-    def group_organisation(self, df):
-        grouping_col = df.columns[2]
-        return df.groupby(grouping_col).sum()
+    # def group_organisation(self, df):
+    #     grouping_col = df.columns[2]
+    #     return df.groupby(grouping_col).sum()
     
-    def group_bin_location(self, df):
-        grouping_col = df.columns[3]
-        return df.groupby(grouping_col).sum()
+    # def group_bin_location(self, df):
+    #     grouping_col = df.columns[3]
+    #     return df.groupby(grouping_col).sum()
     
     def run(self):
         data = {}
         if self.download_new:
             df = self.download_data()
         df = self.select_columns(df)
-        df = self.transpose_to_ts(df)
+        df = self.sort_dates(df)
+        # df = self.transpose_to_ts(df)
         
-        df1 = self.group_item(df)
-        df2 = self.group_collection_method(df)
-        df3 = self.group_organisation(df)
-        df4 = self.group_bin_location(df)
+        # df1 = self.group_item(df)
+        # df2 = self.group_collection_method(df)
+        # df3 = self.group_organisation(df)
+        # df4 = self.group_bin_location(df)
+        
         data['original'] = df
-        data['item'] = df1
-        data['collection_method'] = df2
-        data['organisation'] = df3
-        data['bin_location'] = df4
+        # data['item'] = df1
+        # data['collection_method'] = df2
+        # data['organisation'] = df3
+        # data['bin_location'] = df4
         
         return data
+    
+def AggregateData(df):
+    df = df['Date'].value_counts()
+        
+    return df
 
 x = PrepareData().run()
-print(x['original'])
-# print(x['collection_method'].dtypes)
+df = x['original']
+y = AggregateData(df)
+# print(x['original'].head(5))
+# print(x)
+# print(df.head(5))
+print(y)
 
-
-# # working code
-# x = pd.read_csv(download_link)
-# print(x.head)
