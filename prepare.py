@@ -24,20 +24,16 @@ class PrepareData:
     def sort_dates(self, df):
         # convert data type of date column from object to datetime
         df['Date'] = pd.to_datetime(df['Date'])
+        
         # sort dates in ascending order
         df.sort_values(by='Date', inplace=True)
-        # convert dates to month names
-        df['Date'] = df['Date'].dt.month_name().str.slice(stop=3)
 
         return df
     
     def transpose_to_ts(self, df):
         # set date column as index of dataframe
         df.set_index('Date', inplace = True)
-        # sort according to date
-        # df = df.sort_index()
-        # df = df.T
-        # df.index = pd.to_datetime(df.index)
+        
         return df
     
     # def group_item(self, df):
@@ -58,10 +54,13 @@ class PrepareData:
     
     def run(self):
         data = {}
+        
         if self.download_new:
             df = self.download_data()
+            
         df = self.select_columns(df)
         df = self.sort_dates(df)
+        
         # df = self.transpose_to_ts(df)
         
         # df1 = self.group_item(df)
@@ -78,15 +77,15 @@ class PrepareData:
         return data
     
 def AggregateData(df):
-    df = df['Date'].value_counts()
-        
-    return df
+    data_2 = {}
+    data_2['item_table'] = pd.crosstab(df['Item'], pd.PeriodIndex(df['Date'], freq='M'))
+    data_2['collection_method_table'] = pd.crosstab(df['House Collection/ Self Pickup'], pd.PeriodIndex(df['Date'], freq='M'))
+    data_2['organisation_table'] = pd.crosstab(df['Organisation'], pd.PeriodIndex(df['Date'], freq='M'))
+    data_2['location_table'] = pd.crosstab(df['Bin Location'], pd.PeriodIndex(df['Date'], freq='M'))
 
-x = PrepareData().run()
-df = x['original']
-y = AggregateData(df)
-# print(x['original'].head(5))
-# print(x)
-# print(df.head(5))
-print(y)
+    return data_2
 
+data = PrepareData().run()
+df = data['original']
+data_2 = AggregateData(df)
+print(data_2['collection_method_table'])
