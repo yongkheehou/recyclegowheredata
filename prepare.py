@@ -78,14 +78,14 @@ class PrepareData:
     
 def AggregateData(df):
     data_2 = {}
-    data_2['item_table'] = pd.crosstab(df['Item'], pd.PeriodIndex(df['Date'], freq='M'))
-    data_2['collection_method_table'] = pd.crosstab(df['House Collection/ Self Pickup'], pd.PeriodIndex(df['Date'], freq='M'))
-    data_2['organisation_table'] = pd.crosstab(df['Organisation'], pd.PeriodIndex(df['Date'], freq='M'))
-    data_2['location_table'] = pd.crosstab(df['Bin Location'], pd.PeriodIndex(df['Date'], freq='M'))
+    data_2['item_table'] = pd.crosstab(df['Item'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None)
+    data_2['collection_method_table'] = pd.crosstab(df['House Collection/ Self Pickup'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None)
+    data_2['organisation_table'] = pd.crosstab(df['Organisation'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None)
+    data_2['location_table'] = pd.crosstab(df['Bin Location'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None)
 
     return data_2
 
 data = PrepareData().run()
 df = data['original']
 data_2 = AggregateData(df)
-print(data_2['collection_method_table'])
+print(data_2['item_table'])
