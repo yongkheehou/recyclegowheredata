@@ -94,9 +94,3 @@ def save(data_2):
     data_2['location_table'].to_csv("data/location_table.csv", index=False)
     
     return 
-
-data = PrepareData().run()
-df = data['original']
-data_2 = AggregateData(df)
-save(data_2)
-print(data_2['original'])
