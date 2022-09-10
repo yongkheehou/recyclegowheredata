@@ -11,7 +11,7 @@ map/display - contains files for CSS/HTML/Javascript
 
 Please install django and googlemaps for Python.
 
-You need an API key for this, go to Google Maps API and create an account, and obtain the API key. After which, go to ./map/display/google_api.py and replace the variable value 'GOOGLE_KEY' with your API key.
+You need an API key for this, go to Google Maps API and create an account, and obtain the API key. After which, go to ./map/display/views.py and replace the variable value 'GOOGLE_KEY' with your API key.
 
 If you like to change the start point and destination, go to ./map/display/views.py and change the variables 'start' and 'end' to your desired values. Note: They need not be coordinates. Refer to Google Maps API documentation to find out which parameters could be entered into googlemaps.directions().
 

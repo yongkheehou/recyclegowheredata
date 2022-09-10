@@ -1,8 +1,6 @@
 from xml.dom import minicompat
 import googlemaps
 
-GOOGLE_KEY = 'YOUR_GOOGLE_KEY'
-
 
 class Direction:
     def __init__(self, json_result):
