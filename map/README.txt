@@ -13,6 +13,8 @@ Please install django and googlemaps for Python.
 
 You need an API key for this, go to Google Maps API and create an account, and obtain the API key. After which, go to ./map/display/views.py and replace the variable value 'GOOGLE_KEY' with your API key.
 
+Change the secret key in ./map/map/settings.py to yours.
+
 If you like to change the start point and destination, go to ./map/display/views.py and change the variables 'start' and 'end' to your desired values. Note: They need not be coordinates. Refer to Google Maps API documentation to find out which parameters could be entered into googlemaps.directions().
 
 To launch the Django app, change directory to ./map and run the following code in the command prompt:
