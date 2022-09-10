@@ -9,7 +9,7 @@ mode = 'transit'
 transitOptions = ''
 provideRouteAlternatives = 'true'
 
-GOOGLE_KEY = 'AIzaSyDVqJ3OlUJYnvzLjas0KEBhTubTrB8N0Ug'
+GOOGLE_KEY = 'YOUR_GOOGLE_KEY'
 #r = requests.get(f'https://maps.googleapis.com/maps/api/directions/json?origin={str(start[0])},{str(start[1])}&destination={str(dest[0])},{str(dest[1])}&mode={mode}&provideRouteAlternatives={provideRouteAlternatives}&key={GOOGLE_KEY}')
 
 map = Map(GOOGLE_KEY)
