@@ -78,16 +78,16 @@ class PrepareData:
     
 def AggregateData(df):
     data_2 = {}
-    data_2['original'] = df
-    data_2['item_table'] = pd.crosstab(df['Item'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None)
-    data_2['collection_method_table'] = pd.crosstab(df['House Collection/ Self Pickup'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None)
-    data_2['organisation_table'] = pd.crosstab(df['Organisation'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None)
-    data_2['location_table'] = pd.crosstab(df['Bin Location'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None)
+    data_2['original_table'] = df
+    data_2['item_table'] = pd.crosstab(df['Item'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None).T
+    data_2['collection_method_table'] = pd.crosstab(df['House Collection/ Self Pickup'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None).T
+    data_2['organisation_table'] = pd.crosstab(df['Organisation'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None).T
+    data_2['location_table'] = pd.crosstab(df['Bin Location'], pd.PeriodIndex(df['Date'], freq='M')).rename_axis(columns=None).T
 
     return data_2
 
 def save(data_2):
-    data_2['original'].to_csv("data/original.csv", index=False)
+    data_2['original_table'].to_csv("data/original.csv", index=False)
     data_2['item_table'].to_csv("data/item_table.csv", index=False)
     data_2['collection_method_table'].to_csv("data/collection_method_table.csv", index=False)
     data_2['organisation_table'].to_csv("data/organisation_table.csv", index=False)
