@@ -33,13 +33,14 @@ def optimize_func(params, x, y, model):
     error = y - y_pred
     return error
 
+
 class CasesModel:
     def __init__(self, model, data, last_date, n_train, n_smooth, 
                  n_pred, L_n_min, L_n_max, **kwargs):
-        
         # Set basic attributes
         self.model = model
         self.data = data
+        # data type of index (date) of tables is period
         self.last_date = self.get_last_date(last_date)
         self.n_train = n_train
         self.n_smooth = n_smooth
@@ -49,17 +50,15 @@ class CasesModel:
         self.kwargs = kwargs
         
         # Set attributes for prediction
-        self.first_pred_date = pd.Timestamp(self.last_date) + pd.Timedelta("1D")
+        self.first_pred_date = pd.Timestamp(self.data['original_table']['Date'].index[-1]) + pd.Timedelta("1D")
         self.pred_index = pd.date_range(start=self.first_pred_date, periods=n_pred)
         
     def get_last_date(self, last_date):
         # Use the most current date as the last actual date if not provided
         if last_date is None:
-            date = self.data['original_table']['Date'].iloc[-1]
-            year_month = date.strftime('%Y-%m')
-            
-            return year_month
-        
+            periods = pd.PeriodIndex(self.data['original_table']['Date'], freq='M')
+            timestamp = periods[-1]
+            return timestamp
         else:
             return pd.Timestamp(last_date)
         
@@ -72,6 +71,11 @@ class CasesModel:
         self.params = {}
         self.pred_daily = {}
         self.pred_cumulative = {}
+        self.category = None
+        self.item = None
+        self.L0 = None
+        self.L_max = None
+        self.L_min = None
         
         # Dictionary to hold DataFrame of actual and predicted values
         self.combined_daily = {}
@@ -82,99 +86,58 @@ class CasesModel:
         self.combined_cumulative_s = {}
         
     def smooth(self, s):
+        if s.index.inferred_type == "datetime64":
+            from datetime import datetime
+            s=pd.Series(['{}-{:02d}'.format(x.year,x.month) if isinstance(x, datetime) else "Nat" for x in pd.DatetimeIndex(s).to_pydatetime()])
         s = s[:self.last_date]
-        
-        # not necessary to check if first value is zero
-        # possible for 0 items to be recycled
-        
-        # if s.values[0] == 0:
-        #     # Filter the data if the first value is 0
-        #     last_zero_date = s[s == 0].index[-1]
-        #     s = s.loc[last_zero_date:]
-        #     s_daily = s.diff().dropna()
-        # else:
-        #     # If first value not 0, use it to fill in the 
-        #     # first missing value
-        #     s_daily = s.diff().fillna(s.iloc[0])
+        if s.values[0] == 0:
+            # Filter the data if the first value is 0
+            last_zero_date = s[s == 0].index[-1]
+            s = s.loc[last_zero_date:]
+            s_daily = s.diff().dropna()
+        else:
+            # If first value not 0, use it to fill in the 
+            # first missing value
+            s_daily = s.diff().fillna(s.iloc[0])
 
         # Don't smooth data with less than MIN_OBS values
-        if len(s) < MIN_OBS:
-            # return s_daily.cumsum()
-            return -1
+        if len(s_daily) < MIN_OBS:
+            return s_daily.cumsum()
 
-        y = s.values
+        y = s_daily.values
         frac = self.n_smooth / len(y)
         x = np.arange(len(y))
         y_pred = lowess(y, x, frac=frac, is_sorted=True, return_sorted=False)
-        s_pred = pd.Series(y_pred, index=s.index).clip(0)
-        # s_pred_cumulative = s_pred.cumsum()
-                
-                
-                
-        # this is causing errors because what happens if dec value == 0
-        # if s_pred_cumulative[-1] == 0:
-        if s_pred[-1] == 0:
+        s_pred = pd.Series(y_pred, index=s_daily.index).clip(0)
+        s_pred_cumulative = s_pred.cumsum()
+        
+        if s_pred_cumulative[-1]  == 0:
             # Don't use smoothed values if they are all 0
-            # return s_daily.cumsum()
-            return s_pred
+            return s_daily.cumsum()
         
         last_actual = s.values[-1]
-        # last_smoothed = s_pred_cumulative.values[-1]
-        last_smoothed = s_pred.values[-1]
-        # s_pred_cumulative *= last_actual / last_smoothed
-        # return s_pred_cumulative
-        s_pred *= last_actual / last_smoothed
-        return s_pred
+        last_smoothed = s_pred_cumulative.values[-1]
+        s_pred_cumulative *= last_actual / last_smoothed
+        return s_pred_cumulative
     
     def get_train(self, smoothed):
         # Filter the data for the most recent to capture new waves
         return smoothed.iloc[-self.n_train:]
     
-    # s = train
     def get_L_limits(self, s):
-        # nonzero = np.nonzero(s)
-        # last_val = s[nonzero[-1]]
-        # second_last = s[nonzero[-2]]
         last_val = s[-1]
-        s = s[:-1]
-        while last_val == 0:
-            last_val = s[-1]
-            s = s[:-1]
-        second_last = s[-1]
-        while second_last == 0:
-            s = s[:-1]
-            second_last = s[-1]
-        # last_pct = s.pct_change()[-1] + 1
-        # this worked until marina mall
-        # last_pct = nonzero.pct_change()[-1]
-        last_pct =  100 * (last_val-second_last) / second_last
-        # problem because last_pct < 1 => L_max < L_min
-        # take note of this problem
-        if last_pct >= 0:
-            last_pct += 1
-            L_min = last_val * last_pct ** self.L_n_min
-            L_max = last_val * last_pct ** self.L_n_max 
-        else:
-            last_pct = 1 + last_pct
-            L_max = last_val * last_pct ** self.L_n_min
-            L_min = last_val * last_pct ** self.L_n_max
-        # for testing purposes
-        if math.isnan(L_min) == True or math.isnan(L_max) == True:
-            return L_min, L_max, -100
-        # if L_min and L_max is too small
-        if int(L_min) == int(L_max):
-            L_min = -0.1
-            L_max = 0.1
+        last_pct = s.pct_change()[-1] + 1
+        L_min = last_val * last_pct ** self.L_n_min
+        L_max = last_val * last_pct ** self.L_n_max + 1
         L0 = (L_max - L_min) / 2 + L_min
-        
         return L_min, L_max, L0
-    
-    # when will L be nan?
     
     def get_bounds_p0(self, s):
         L_min, L_max, L0 = self.get_L_limits(s)
-        if L0 == -100:
-            return -100, -100
+        if L0 == float('NaN'):
+            bounds2 = np.full((2, 5), np.nan)
+            p02 = np.full(5, np.nan)
+            return bounds2, p02
         x0_min, x0_max = -50, 50
         k_min, k_max = 0.01, 0.5
         v_min, v_max = 0.01, 2
@@ -184,8 +147,8 @@ class CasesModel:
         upper = L_max, x0_max, k_max, v_max, s_max
         bounds = lower, upper
         p0 = L0, 0, 0.1, 0.1, s0
-        return bounds, p0
-        
+        return bounds, p0, L0, L_max, L_min
+    
     def train_model(self, s, bounds, p0):
         y = s.values
         n_train = len(y)
@@ -193,33 +156,27 @@ class CasesModel:
         res = least_squares(optimize_func, p0, args=(x, y, self.model), bounds=bounds, **self.kwargs)
         return res.x
     
-    
-    # start editing here
-
-    
     def get_pred_daily(self, n_train, params):
         x_pred = np.arange(n_train - 1, n_train + self.n_pred)
         y_pred = self.model(x_pred, *params)
-        # y_pred_daily = np.diff(y_pred)
-        y_pred_daily = y_pred
-        # return pd.Series(y_pred_daily, index=self.pred_index)
-        return y_pred
+        y_pred_daily = np.diff(y_pred)
+        return pd.Series(y_pred_daily, index=self.pred_index)
     
     def get_pred_cumulative(self, s, pred_daily):
         last_actual_value = s.loc[self.last_date]
         return pred_daily.cumsum() + last_actual_value
     
-    def convert_to_df(self, tables_to_access):
+    def convert_to_df(self, gk):
         # convert dictionary of areas mapped to Series to DataFrames
-        self.smoothed[tables_to_access] = pd.DataFrame(self.smoothed[tables_to_access]).fillna(0).astype('int')
-        self.bounds[tables_to_access] = pd.concat(self.bounds[tables_to_access].values(), 
-                                    keys=self.bounds[tables_to_access].keys()).T
-        self.bounds[tables_to_access].loc['L'] = self.bounds[tables_to_access].loc['L'].round()
-        self.p0[tables_to_access] = pd.DataFrame(self.p0[tables_to_access], index=['L', 'x0', 'k', 'v', 's'])
-        self.p0[tables_to_access].loc['L'] = self.p0[tables_to_access].loc['L'].round()
-        self.params[tables_to_access] = pd.DataFrame(self.params[tables_to_access], index=['L', 'x0', 'k', 'v', 's'])
-        self.pred_daily[tables_to_access] = pd.DataFrame(self.pred_daily[tables_to_access])
-        self.pred_cumulative[tables_to_access] = pd.DataFrame(self.pred_cumulative[tables_to_access])
+        self.smoothed[gk] = pd.DataFrame(self.smoothed[gk]).fillna(0).astype('int')
+        self.bounds[gk] = pd.concat(self.bounds[gk].values(), 
+                                    keys=self.bounds[gk].keys()).T
+        self.bounds[gk].loc['L'] = self.bounds[gk].loc['L'].round()
+        self.p0[gk] = pd.DataFrame(self.p0[gk], index=['L', 'x0', 'k', 'v', 's'])
+        self.p0[gk].loc['L'] = self.p0[gk].loc['L'].round()
+        self.params[gk] = pd.DataFrame(self.params[gk], index=['L', 'x0', 'k', 'v', 's'])
+        self.pred_daily[gk] = pd.DataFrame(self.pred_daily[gk])
+        self.pred_cumulative[gk] = pd.DataFrame(self.pred_cumulative[gk])
         
     def combine_actual_with_pred(self):
         for gk, df_pred in self.pred_cumulative.items():
@@ -233,12 +190,12 @@ class CasesModel:
             self.combined_daily_s[gk] = df_comb_smooth.diff().fillna(df_comb.iloc[0]).astype('int')
 
     def run(self):
-        
         self.init_dictionaries()
-        category = {'original', 'item', 'collection_method', 'organisation', 'location'}
+        category = {'item', 'collection_method', 'organisation', 'location'}
         for category in category:
             tables_to_access = f'{category}_table'
             df_cases = self.data[tables_to_access]
+            self.category = category
             self.smoothed[tables_to_access] = {}
             self.bounds[tables_to_access] = {}
             self.p0[tables_to_access] = {}
@@ -247,21 +204,9 @@ class CasesModel:
             self.pred_cumulative[tables_to_access] = {}
             
             for item, item_data in self.data[tables_to_access].items():
-                # return item_data
-                # scaled by 100
-                # item_data *= 100
+                self.item = item
                 smoothed = self.smooth(item_data)
-                
-                # if type(smoothed) == int:
-                #     return item_data
-                # jam bottle
                 train = self.get_train(smoothed)
-                # if item == 'MARINA MALL':
-                #     return train
-                   
-                # complication: not all items in each cateogory
-                # and not all categories will have graphs 
-                # need to resolve this when plotting
                 n_train = len(train)
                 
                 if n_train < MIN_OBS or all(item == 0 for item in train):
@@ -269,29 +214,19 @@ class CasesModel:
                     p0 = np.full(5, np.nan)
                     params = np.full(5, np.nan)
                     pred_daily = pd.Series(np.zeros(self.n_pred), index=self.pred_index)
-                            
+                    pred_cumulative = self.get_pred_cumulative(item_data, pred_daily)
+                    
                 else:
-                    # if all(item == 0 for item in train): 
-                    #     return tables_to_access+item
-                 
-                    # else:
-                    bounds, p0 = self.get_bounds_p0(train)
-                    if bounds == -100 and p0 == -100:
-                        return category+item
-                    lower = bounds[0][0]
-                    upper = bounds[1][0]
-                    if lower > upper:
-                        return item
-                    
-                    # condition 1 fixed: p0 not in range(bounds)
-                    # condition 2 debugging: Each lower bound must be strictly less than each upper bound.
-                    params = self.train_model(train, bounds=bounds,  p0=p0)
-                    pred_daily = self.get_pred_daily(n_train, params).round(0)
-                    
-                # return pred_daily
-                pred_cumulative = self.get_pred_cumulative(item_data, pred_daily)
-                # return pred_daily
-
+                    bounds, p0, self.L0, self.L_max, self.L_min = self.get_bounds_p0(train)
+                    if self.L0:
+                        params = np.full(5, np.nan)
+                        pred_daily = pd.Series(np.zeros(self.n_pred), index=self.pred_index)
+                        pred_cumulative = self.get_pred_cumulative(item_data, pred_daily)
+                    else:
+                        params = self.train_model(train, bounds=bounds,  p0=p0)
+                        pred_daily = self.get_pred_daily(n_train, params).round(0)
+                        pred_cumulative = self.get_pred_cumulative(item_data, pred_daily)
+                
                 # save results to dictionaries mapping each area to its result
                 self.smoothed[tables_to_access][item] = smoothed
                 self.bounds[tables_to_access][item] = pd.DataFrame(bounds, index=['lower', 'upper'], 
@@ -300,26 +235,25 @@ class CasesModel:
                 self.params[tables_to_access][item] = params
                 self.pred_daily[tables_to_access][item] = pred_daily.astype('int')
                 self.pred_cumulative[tables_to_access][item] = pred_cumulative.astype('int')
-                # return pred_daily
-                
-        # this cannot be tables_to_access
-        self.convert_to_df(tables_to_access)
-        # code works till here
+            self.convert_to_df(tables_to_access)
         self.combine_actual_with_pred()
+        
+        return 1
         
     def plot_prediction(self, group, area, **kwargs):
         group_kind = f'{group}_cases'
         actual = self.data[group_kind][area]
         pred = self.pred_cumulative[group_kind][area]
-        first_date = self.last_date - pd.Timedelta(self.n_train, 'D')
-        last_pred_date = self.last_date + pd.Timedelta(self.n_pred, 'D')
+        first_date = self.data['original_table'].index[-1] - pd.Timedelta(self.n_train, 'D')
+        last_pred_date = self.data['original_table'].index[-1] + pd.Timedelta(self.n_pred, 'D')
         actual.loc[first_date:last_pred_date].plot(label='Actual', **kwargs)
         pred.plot(label='Predicted').legend()
-   
+
 data = PrepareData().run()  
 df = data['original']
 data_2 = AggregateData(df)
-# print(data_2['item_table'])  
+# print(data_2['item_table'])
+# print(data_2['item_table'].index.inferred_type)
  
 a = CasesModel(model=general_logistic_shift,
         data=data_2,
@@ -331,3 +265,5 @@ a = CasesModel(model=general_logistic_shift,
         L_n_max=L_N_MAX)
 b = a.run()
 print(b)
+# c = a.get_last_date(None)
+# print(c)
