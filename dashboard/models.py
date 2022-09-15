@@ -237,16 +237,17 @@ class CasesModel:
                 self.pred_cumulative[tables_to_access][item] = pred_cumulative.astype('int')
             self.convert_to_df(tables_to_access)
         self.combine_actual_with_pred()
-        
-        return 1
-        
+                
     def plot_prediction(self, group, area, **kwargs):
-        group_kind = f'{group}_cases'
+        group_kind = f'{group}_table'
         actual = self.data[group_kind][area]
         pred = self.pred_cumulative[group_kind][area]
-        first_date = self.data['original_table'].index[-1] - pd.Timedelta(self.n_train, 'D')
-        last_pred_date = self.data['original_table'].index[-1] + pd.Timedelta(self.n_pred, 'D')
-        actual.loc[first_date:last_pred_date].plot(label='Actual', **kwargs)
+        first_date = pd.Timestamp(self.data['original_table']['Date'].index[-1]) - pd.Timedelta(self.n_train, 'D')
+        last_pred_date = pd.Timestamp(self.data['original_table']['Date'].index[-1]) + pd.Timedelta(self.n_pred, 'D')
+        try:
+            actual.loc[first_date:last_pred_date].plot(label='Actual', **kwargs)
+        except ValueError:
+            pass
         pred.plot(label='Predicted').legend()
 
 data = PrepareData().run()  
@@ -264,6 +265,8 @@ a = CasesModel(model=general_logistic_shift,
         L_n_min=L_N_MIN,
         L_n_max=L_N_MAX)
 b = a.run()
-print(b)
+c = a.plot_prediction('item', 'Facial Cleanser Bottle')
+print(c)
+# print(b)
 # c = a.get_last_date(None)
 # print(c)
