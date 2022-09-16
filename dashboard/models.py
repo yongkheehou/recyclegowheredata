@@ -51,7 +51,7 @@ class CasesModel:
         
         # Set attributes for prediction
         self.first_pred_date = pd.Timestamp(self.data['original_table']['Date'].index[-1]) + pd.Timedelta("1D")
-        self.pred_index = pd.date_range(start=self.first_pred_date, periods=n_pred)
+        self.pred_index = pd.date_range(start=self.first_pred_date, periods=n_pred, freq = 'M')
         
     def get_last_date(self, last_date):
         # Use the most current date as the last actual date if not provided
@@ -169,25 +169,35 @@ class CasesModel:
     def convert_to_df(self, gk):
         # convert dictionary of areas mapped to Series to DataFrames
         self.smoothed[gk] = pd.DataFrame(self.smoothed[gk]).fillna(0).astype('int')
+        self.smoothed[gk].to_csv(f'dashboard/data/model/python_smoothed_{gk}.csv', index=False)
         self.bounds[gk] = pd.concat(self.bounds[gk].values(), 
                                     keys=self.bounds[gk].keys()).T
         self.bounds[gk].loc['L'] = self.bounds[gk].loc['L'].round()
+        self.bounds[gk].to_csv(f'dashboard/data/model/python_bounds_{gk}.csv', index=False)
         self.p0[gk] = pd.DataFrame(self.p0[gk], index=['L', 'x0', 'k', 'v', 's'])
         self.p0[gk].loc['L'] = self.p0[gk].loc['L'].round()
+        self.p0[gk].to_csv(f'dashboard/data/model/python_p0_{gk}.csv', index=False)
         self.params[gk] = pd.DataFrame(self.params[gk], index=['L', 'x0', 'k', 'v', 's'])
+        self.params[gk].to_csv(f'dashboard/data/model/python_params_{gk}.csv', index=False)
         self.pred_daily[gk] = pd.DataFrame(self.pred_daily[gk])
+        self.pred_daily[gk].to_csv(f'dashboard/data/model/python_pred_daily_{gk}.csv', index=False)
         self.pred_cumulative[gk] = pd.DataFrame(self.pred_cumulative[gk])
+        self.pred_cumulative[gk].to_csv(f'dashboard/data/model/python_pred_cumulative_{gk}.csv', index=False)
         
     def combine_actual_with_pred(self):
         for gk, df_pred in self.pred_cumulative.items():
             df_actual = self.data[gk][:self.last_date]
             df_comb = pd.concat((df_actual, df_pred))
             self.combined_cumulative[gk] = df_comb
+            self.combined_cumulative[gk].to_csv(f'dashboard/data/model/python_combined_cumulative_{gk}.csv', index=False)
             self.combined_daily[gk] = df_comb.diff().fillna(df_comb.iloc[0]).astype('int')
+            self.combined_daily[gk].to_csv(f'dashboard/data/model/python_combined_daily_{gk}.csv', index=False)
             
             df_comb_smooth = pd.concat((self.smoothed[gk], df_pred))
             self.combined_cumulative_s[gk] = df_comb_smooth
+            self.combined_cumulative_s[gk].to_csv(f'dashboard/data/model/python_combined_cumulative_s_{gk}.csv', index=False)
             self.combined_daily_s[gk] = df_comb_smooth.diff().fillna(df_comb.iloc[0]).astype('int')
+            self.combined_daily_s[gk].to_csv(f'dashboard/data/model/python_combined_daily_s_{gk}.csv', index=False)
 
     def run(self):
         self.init_dictionaries()
@@ -264,9 +274,5 @@ a = CasesModel(model=general_logistic_shift,
         n_pred=N_PRED,
         L_n_min=L_N_MIN,
         L_n_max=L_N_MAX)
-b = a.run()
-c = a.plot_prediction('item', 'Facial Cleanser Bottle')
-print(c)
-# print(b)
-# c = a.get_last_date(None)
-# print(c)
+a.run()
+print(a.pred_cumulative['item_table'].iloc[-5:])
