@@ -87,10 +87,10 @@ def AggregateData(df):
     return data_2
 
 def save(data_2):
-    data_2['original_table'].to_csv("data/original.csv", index=False)
-    data_2['item_table'].to_csv("data/item_table.csv", index=False)
-    data_2['collection_method_table'].to_csv("data/collection_method_table.csv", index=False)
-    data_2['organisation_table'].to_csv("data/organisation_table.csv", index=False)
-    data_2['location_table'].to_csv("data/location_table.csv", index=False)
+    data_2['original_table'].to_csv("dashboard/data/original.csv", index=False)
+    data_2['item_table'].to_csv("dashboard/data/item_table.csv", index=False)
+    data_2['collection_method_table'].to_csv("dashboard/data/collection_method_table.csv", index=False)
+    data_2['organisation_table'].to_csv("dashboard/data/organisation_table.csv", index=False)
+    data_2['location_table'].to_csv("dashboard/data/location_table.csv", index=False)
     
     return 
