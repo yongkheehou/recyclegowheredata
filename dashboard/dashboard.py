@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 #importing the dataset
-df_imp = pd.read_csv("https://raw.githubusercontent.com/yongkheehou/recyclegowheredata/main/dashboard/random_generated_website_usage_data.csv", index_col='s/n')
+df_imp = pd.read_csv("https://raw.githubusercontent.com/yongkheehou/recyclegowheredata/main/dashboard/Data/random_generated_website_usage_data.csv", index_col='s/n')
 
 
 # #Data pre processing
