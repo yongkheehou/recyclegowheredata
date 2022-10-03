@@ -1,0 +1,3 @@
+to open dashboard,
+
+open Dashboard.py and run the following code: python -m streamlit run Dashboard.py
